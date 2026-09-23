@@ -1,0 +1,31 @@
+name: 'ShieldAI Security Scanner'
+description: 'Autonomous DevSecOps scanner: OWASP vulnerabilities, secret leaks, and security compliance.'
+author: 'ShieldAI'
+branding:
+  icon: 'shield'
+  color: 'green'
+
+inputs:
+  license_key:
+    description: 'ShieldAI PRO license key (optional, for auto-remediation)'
+    required: false
+    default: ''
+  fail_on_critical:
+    description: 'Fail CI/CD pipeline if critical issues are found'
+    required: false
+    default: 'true'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Run ShieldAI Scanner
+      shell: bash
+      env:
+        SHIELDAI_LICENSE_KEY: ${{ inputs.license_key }}
+        FAIL_ON_CRITICAL: ${{ inputs.fail_on_critical }}
+      run: python ${{ github.action_path }}/shieldai_cli.py
