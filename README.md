@@ -28,7 +28,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Run ShieldAI Scanner
-        uses: kroaniz/shieldai-action@v1.0.0
+        uses: kroaniz/shieldai-action@main
         with:
           fail_on_critical: 'true'
           # license_key: ${{ secrets.SHIELDAI_PRO_KEY }} # Optional (PRO)
