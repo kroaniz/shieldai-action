@@ -1,31 +1,72 @@
-name: 'ShieldAI Security Scanner'
-description: 'Autonomous DevSecOps scanner: OWASP vulnerabilities, secret leaks, and security compliance.'
-author: 'ShieldAI'
+name: 'ShieldAI Autonomous Cloud Resilience & DevSecOps'
+description: 'Autonomous zero-touch DevSecOps engine: SAST, SCA, Dockerfile hardening, SARIF export & GitOps Auto-PR.'
+author: 'ShieldAI Enterprise'
 branding:
   icon: 'shield'
-  color: 'green'
+  color: 'blue'
 
 inputs:
   license_key:
-    description: 'ShieldAI PRO license key (optional, for auto-remediation)'
+    description: 'ShieldAI Enterprise / PRO license token for auto-remediation'
     required: false
     default: ''
-  fail_on_critical:
-    description: 'Fail CI/CD pipeline if critical issues are found'
+  api_url:
+    description: 'ShieldAI Central Resilience Engine URL'
+    required: false
+    default: 'https://shieldai-action.onrender.com'
+  github_token:
+    description: 'GitHub Token for opening automated Pull Requests and uploading SARIF'
+    required: false
+    default: ${{ github.token }}
+  auto_pr:
+    description: 'Automatically create Pull Request with AI hot-patch if critical flaws are detected'
     required: false
     default: 'true'
+  fail_on_critical:
+    description: 'Fail CI/CD pipeline execution if unmitigated critical flaws exist'
+    required: false
+    default: 'true'
+
+outputs:
+  critical_count:
+    description: 'Total number of critical vulnerabilities discovered'
+    value: ${{ steps.scanner.outputs.critical_count }}
+  sarif_path:
+    description: 'Path to generated OASIS SARIF v2.1.0 security report'
+    value: 'shieldai_results.sarif'
+  pr_url:
+    description: 'URL of the automatically opened remediation Pull Request (if spawned)'
+    value: ${{ steps.scanner.outputs.pr_url }}
 
 runs:
   using: 'composite'
   steps:
-    - name: Set up Python
+    - name: Set up Python Runtime
       uses: actions/setup-python@v5
       with:
         python-version: '3.11'
 
-    - name: Run ShieldAI Scanner
+    - name: Install Runtime Dependencies
+      shell: bash
+      run: |
+        python -m pip install --upgrade pip
+        pip install httpx
+
+    - name: Execute ShieldAI Resilience Pipeline
+      id: scanner
       shell: bash
       env:
         SHIELDAI_LICENSE_KEY: ${{ inputs.license_key }}
+        SHIELDAI_API_URL: ${{ inputs.api_url }}
+        GITHUB_TOKEN: ${{ inputs.github_token }}
+        AUTO_PR: ${{ inputs.auto_pr }}
         FAIL_ON_CRITICAL: ${{ inputs.fail_on_critical }}
+        TARGET_REPO: ${{ github.repository }}
       run: python ${{ github.action_path }}/shieldai_cli.py
+
+    - name: Upload SARIF to GitHub Code Scanning Alerts
+      if: always()
+      uses: github/codeql-action/upload-sarif@v3
+      continue-on-error: true
+      with:
+        sarif_file: shieldai_results.sarif
